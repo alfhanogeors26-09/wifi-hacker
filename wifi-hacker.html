@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi Network Scanner & Password Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 100%);
+            color: #00ff00;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Animated background */
+        @keyframes scanlines {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 0 100px;
+            }
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.03) 0px,
+                rgba(0, 255, 0, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            animation: scanlines 8s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px #00ff00;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px #00ff00, 0 0 20px #00aa00;
+            }
+            to {
+                text-shadow: 0 0 20px #00ff00, 0 0 30px #00dd00;
+            }
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #00ff00;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            font-size: 0.9em;
+            color: #00aa00;
+            margin-bottom: 20px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: rgba(0, 20, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.1), transparent);
+            animation: shimmer 3s infinite;
+            z-index: -1;
+        }
+
+        @keyframes shimmer {
+            0% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
+        .panel-title {
+            font-size: 1.3em;
+            color: #00ff00;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 2px solid #00aa00;
+            padding-bottom: 10px;
+        }
+
+        .terminal {
+            height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00aa00;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+
+        .terminal::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal::-webkit-scrollbar-track {
+            background: rgba(0, 50, 0, 0.5);
+        }
+
+        .terminal::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            border-radius: 4px;
+        }
+
+        .log-line {
+            margin-bottom: 8px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-line.success {
+            color: #00ff00;
+        }
+
+        .log-line.warning {
+            color: #ffaa00;
+        }
+
+        .log-line.error {
+            color: #ff0000;
+        }
+
+        .log-line.info {
+            color: #00aaff;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1em;
+            background: #00ff00;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 49% {
+                opacity: 1;
+            }
+            50%, 100% {
+                opacity: 0;
+            }
+        }
+
+        .network-item {
+            background: rgba(0, 40, 0, 0.6);
+            border-left: 3px solid #00ff00;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .network-item:hover {
+            background: rgba(0, 60, 0, 0.8);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            transform: translateX(5px);
+        }
+
+        .network-name {
+            font-weight: bold;
+            color: #00ff00;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+
+        .network-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8em;
+            color: #00aa00;
+        }
+
+        .signal-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .signal-bars {
+            display: flex;
+            gap: 3px;
+            align-items: flex-end;
+        }
+
+        .signal-bar {
+            width: 4px;
+            background: #00aa00;
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .signal-bar.active {
+            background: #00ff00;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
+        .signal-strength {
+            font-size: 0.75em;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #003300 0%, #006600 100%);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            font-size: 0.85em;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #006600 0%, #00aa00 100%);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .password-display {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            padding: 15px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .password-text {
+            font-size: 1.5em;
+            color: #00ff00;
+            word-break: break-all;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff00;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .password-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.8em;
+            color: #00aa00;
+            margin-top: 10px;
+        }
+
+        .stat {
+            background: rgba(0, 50, 0, 0.5);
+            padding: 8px;
+            border-radius: 2px;
+            border-left: 2px solid #00ff00;
+        }
+
+        .stat-label {
+            display: block;
+            color: #00aa00;
+            margin-bottom: 3px;
+        }
+
+        .stat-value {
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0, 20, 0, 0.8);
+            border: 1px solid #00aa00;
+            color: #00ff00;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        input[type="number"]:focus,
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 5px #00ff00;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stats-item {
+            background: rgba(0, 50, 0, 0.5);
+            padding: 10px;
+            border-radius: 2px;
+            border: 1px solid #00aa00;
+            text-align: center;
+        }
+
+        .stats-item-value {
+            font-size: 1.5em;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .stats-item-label {
+            font-size: 0.75em;
+            color: #00aa00;
+            margin-top: 5px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #00aa00;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #00aa00;
+            font-size: 0.8em;
+        }
+
+        .copy-btn {
+            padding: 6px 12px;
+            font-size: 0.75em;
+            min-width: auto;
+        }
+
+        .strength-meter {
+            height: 8px;
+            background: rgba(0, 50, 0, 0.5);
+            border: 1px solid #00aa00;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .strength-fill {
+            height: 100%;
+            background: #00ff00;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
+        .strength-fill.weak {
+            width: 33%;
+            background: #ff0000;
+        }
+
+        .strength-fill.medium {
+            width: 66%;
+            background: #ffaa00;
+        }
+
+        .strength-fill.strong {
+            width: 100%;
+            background: #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔓 WiFi HACKER</h1>
+            <p class="subtitle">Network Scanner & Secure Password Generator</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel - Terminal & Scanner -->
+            <div class="panel">
+                <div class="panel-title"><span class="status-indicator"></span>Terminal Output</div>
+                <div class="terminal" id="terminal">
+                    <div class="log-line info">> System initialized...</div>
+                    <div class="log-line info">> Ready for operations<span class="cursor"></span></div>
+                </div>
+                <div class="button-group">
+                    <button id="scanBtn">🔍 Scan Networks</button>
+                    <button id="clearTerminal">Clear</button>
+                </div>
+
+                <div class="panel-title" style="margin-top: 20px;">📡 Available Networks</div>
+                <div id="networkList" style="max-height: 250px; overflow-y: auto;">
+                    <div style="color: #00aa00; text-align: center; padding: 20px;">
+                        Click "Scan Networks" to discover WiFi networks
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Password Generator -->
+            <div class="panel">
+                <div class="panel-title"><span class="status-indicator"></span>Password Generator</div>
+                
+                <div class="input-group">
+                    <label for="passwordLength">Password Length:</label>
+                    <input type="number" id="passwordLength" min="8" max="128" value="16">
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="useUppercase" checked>
+                        <label for="useUppercase">Include Uppercase (A-Z)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="useLowercase" checked>
+                        <label for="useLowercase">Include Lowercase (a-z)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="useNumbers" checked>
+                        <label for="useNumbers">Include Numbers (0-9)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="useSymbols" checked>
+                        <label for="useSymbols">Include Symbols (!@#$%^&*)</label>
+                    </div>
+                </div>
+
+                <div class="password-display">
+                    <div class="password-text" id="passwordOutput">Click Generate to create password</div>
+                    <div class="strength-meter">
+                        <div class="strength-fill strong" id="strengthBar"></div>
+                    </div>
+                    <div class="password-stats">
+                        <div class="stat">
+                            <span class="stat-label">Strength</span>
+                            <span class="stat-value" id="strengthText">N/A</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Entropy</span>
+                            <span class="stat-value" id="entropyText">0 bits</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="generateBtn">⚡ Generate Password</button>
+                    <button id="copyBtn" class="copy-btn" title="Copy to clipboard">📋 Copy</button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stats-item">
+                        <div class="stats-item-value" id="generatedCount">0</div>
+                        <div class="stats-item-label">Generated</div>
+                    </div>
+                    <div class="stats-item">
+                        <div class="stats-item-value" id="networkCount">0</div>
+                        <div class="stats-item-label">Networks</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+            <div>⚠️  This tool is for educational and authorized use only.</div>
+            <div>Unauthorized access to computer networks is illegal.</div>
+            <div>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let state = {
+            networks: [],
+            currentPassword: '',
+            generatedCount: 0,
+            isScanning: false
+        };
+
+        // DOM Elements
+        const terminal = document.getElementById('terminal');
+        const networkList = document.getElementById('networkList');
+        const passwordOutput = document.getElementById('passwordOutput');
+        const scanBtn = document.getElementById('scanBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const clearTerminalBtn = document.getElementById('clearTerminal');
+        const passwordLengthInput = document.getElementById('passwordLength');
+        const generatedCountDisplay = document.getElementById('generatedCount');
+        const networkCountDisplay = document.getElementById('networkCount');
+
+        // Logger function with terminal animation
+        function log(message, type = 'info') {
+            const logLine = document.createElement('div');
+            logLine.className = `log-line ${type}`;
+            
+            // Add timestamp
+            const timestamp = new Date().toLocaleTimeString();
+            logLine.textContent = `[${timestamp}] ${message}`;
+            
+            terminal.appendChild(logLine);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Generate realistic WiFi network names
+        function generateNetworkNames() {
+            const names = [
+                'RouterGX-2.4GHz', 'HomeWiFi5G', 'NETGEAR_MESH', 'TP-Link_Guest', 
+                'Xfinity_WiFi', 'CableOne_Home', 'FritzBox_Secure', 'UbiquityPro',
+                'Eero_Network', 'Verizon_5G', 'ATT_Fiber', 'Spectrum_Home',
+                'CenturyLink_WiFi', 'Comcast_ISP', 'Google_Nest', 'Synology_NAS',
+                'MikroTik_AP', 'OpenWrt_Router', 'DD-WRT_Network', 'Tomato_Router'
+            ];
+            return names;
+        }
+
+        // Generate random signal strength
+        function getRandomSignalStrength() {
+            return Math.floor(Math.random() * 5) + 1; // 1-5 bars
+        }
+
+        // Create signal bar visualization
+        function createSignalBars(strength) {
+            let html = '<div class="signal-bars">';
+            for (let i = 1; i <= 5; i++) {
+                html += `<div class="signal-bar ${i <= strength ? 'active' : ''}"></div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // Scan for networks with terminal animation
+        async function scanNetworks() {
+            if (state.isScanning) return;
+            
+            state.isScanning = true;
+            scanBtn.disabled = true;
+            state.networks = [];
+            networkList.innerHTML = '';
+            
+            log('[SCAN] Initializing WiFi adapter...', 'info');
+            await delay(800);
+            
+            log('[SCAN] Scanning for available networks...', 'warning');
+            await delay(1200);
+            
+            log('[SCAN] Analyzing signal patterns...', 'info');
+            await delay(1500);
+            
+            log('[SCAN] Processing security protocols...', 'warning');
+            await delay(1000);
+            
+            const names = generateNetworkNames();
+            const selectedNames = [];
+            
+            // Generate 5-10 networks
+            const networkCount = Math.floor(Math.random() * 6) + 5;
+            for (let i = 0; i < networkCount; i++) {
+                const randomName = names[Math.floor(Math.random() * names.length)];
+                if (!selectedNames.includes(randomName)) {
+                    selectedNames.push(randomName);
+                }
+            }
+
+            log(`[SCAN] Found ${selectedNames.length} network(s)`, 'success');
+            await delay(600);
+
+            // Add networks with animation
+            for (const name of selectedNames) {
+                const strength = getRandomSignalStrength();
+                const network = {
+                    name: name,
+                    strength: strength,
+                    security: ['WPA3', 'WPA2', 'WEP'][Math.floor(Math.random() * 3)],
+                    channel: Math.floor(Math.random() * 13) + 1
+                };
+                
+                state.networks.push(network);
+                log(`[+] Found: ${name} (${network.security}) Ch: ${network.channel}`, 'success');
+                
+                addNetworkToUI(network);
+                await delay(300);
+            }
+
+            log('[SCAN] Network scan completed successfully', 'success');
+            state.isScanning = false;
+            scanBtn.disabled = false;
+            networkCountDisplay.textContent = state.networks.length;
+        }
+
+        // Add network to UI with styling
+        function addNetworkToUI(network) {
+            const networkItem = document.createElement('div');
+            networkItem.className = 'network-item';
+            
+            const strengthPercent = (network.strength / 5) * 100;
+            const signalBars = createSignalBars(network.strength);
+            
+            networkItem.innerHTML = `
+                <div class="network-name">📶 ${network.name}</div>
+                <div class="network-info">
+                    <div>
+                        <span style="color: #00aa00;">Security:</span> ${network.security} | 
+                        <span style="color: #00aa00;">Channel:</span> ${network.channel}
+                    </div>
+                    <div class="signal-container">
+                        ${signalBars}
+                        <div class="signal-strength">${network.strength}/5</div>
+                    </div>
+                </div>
+            `;
+            
+            networkList.appendChild(networkItem);
+        }
+
+        // Generate secure password
+        function generatePassword() {
+            const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+            const numbers = '0123456789';
+            const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            
+            let characters = '';
+            if (document.getElementById('useUppercase').checked) characters += uppercase;
+            if (document.getElementById('useLowercase').checked) characters += lowercase;
+            if (document.getElementById('useNumbers').checked) characters += numbers;
+            if (document.getElementById('useSymbols').checked) characters += symbols;
+            
+            if (characters.length === 0) {
+                log('[!] Error: Select at least one character type', 'error');
+                return '';
+            }
+            
+            const length = parseInt(passwordLengthInput.value);
+            let password = '';
+            
+            // Ensure at least one character from each selected type
+            if (document.getElementById('useUppercase').checked) {
+                password += uppercase[Math.floor(Math.random() * uppercase.length)];
+            }
+            if (document.getElementById('useLowercase').checked) {
+                password += lowercase[Math.floor(Math.random() * lowercase.length)];
+            }
+            if (document.getElementById('useNumbers').checked) {
+                password += numbers[Math.floor(Math.random() * numbers.length)];
+            }
+            if (document.getElementById('useSymbols').checked) {
+                password += symbols[Math.floor(Math.random() * symbols.length)];
+            }
+            
+            // Fill the rest randomly
+            for (let i = password.length; i < length; i++) {
+                password += characters[Math.floor(Math.random() * characters.length)];
+            }
+            
+            // Shuffle password
+            password = password.split('').sort(() => Math.random() - 0.5).join('');
+            
+            return password;
+        }
+
+        // Calculate password entropy
+        function calculateEntropy(password) {
+            let charsetSize = 0;
+            if (/[a-z]/.test(password)) charsetSize += 26;
+            if (/[A-Z]/.test(password)) charsetSize += 26;
+            if (/[0-9]/.test(password)) charsetSize += 10;
+            if (/[!@#$%^&*()\-_+=\[\]{}|;:,.<>?]/.test(password)) charsetSize += 32;
+            
+            const entropy = Math.log2(Math.pow(charsetSize, password.length));
+            return entropy.toFixed(1);
+        }
+
+        // Calculate password strength
+        function getPasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 8) strength += 1;
+            if (password.length >= 12) strength += 1;
+            if (password.length >= 16) strength += 1;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 1;
+            if (/[0-9]/.test(password)) strength += 1;
+            if (/[!@#$%^&*()\-_+=\[\]{}|;:,.<>?]/.test(password)) strength += 1;
+            
+            if (strength <= 2) return 'weak';
+            if (strength <= 4) return 'medium';
+            return 'strong';
+        }
+
+        // Update password display
+        function updatePasswordDisplay(password) {
+            state.currentPassword = password;
+            passwordOutput.textContent = password;
+            
+            const entropy = calculateEntropy(password);
+            const strength = getPasswordStrength(password);
+            const strengthText = strength.charAt(0).toUpperCase() + strength.slice(1);
+            
+            document.getElementById('entropyText').textContent = entropy + ' bits';
+            document.getElementById('strengthText').textContent = strengthText;
+            
+            const strengthBar = document.getElementById('strengthBar');
+            strengthBar.className = `strength-fill ${strength}`;
+            
+            state.generatedCount++;
+            generatedCountDisplay.textContent = state.generatedCount;
+            
+            log(`[+] Generated password (${password.length} chars, ${strength} strength)`, 'success');
+        }
+
+        // Handle password generation
+        async function handleGeneratePassword() {
+            generateBtn.disabled = true;
+            log('[*] Generating secure password...', 'warning');
+            
+            await delay(300);
+            log('[*] Initializing cryptographic algorithm...', 'info');
+            
+            await delay(400);
+            log('[*] Mixing entropy sources...', 'warning');
+            
+            await delay(300);
+            const password = generatePassword();
+            
+            if (password) {
+                updatePasswordDisplay(password);
+                log('[✓] Password generation complete', 'success');
+            }
+            
+            generateBtn.disabled = false;
+        }
+
+        // Copy to clipboard
+        function copyToClipboard() {
+            if (!state.currentPassword) {
+                log('[!] No password to copy', 'error');
+                return;
+            }
+            
+            navigator.clipboard.writeText(state.currentPassword).then(() => {
+                log('[✓] Password copied to clipboard', 'success');
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                log('[!] Failed to copy password', 'error');
+            });
+        }
+
+        // Clear terminal
+        function clearTerminal() {
+            terminal.innerHTML = '';
+            log('[CLEAR] Terminal cleared', 'info');
+        }
+
+        // Utility delay function
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Event listeners
+        scanBtn.addEventListener('click', scanNetworks);
+        generateBtn.addEventListener('click', handleGeneratePassword);
+        copyBtn.addEventListener('click', copyToClipboard);
+        clearTerminalBtn.addEventListener('click', clearTerminal);
+
+        // Generate initial password
+        handleGeneratePassword();
+    </script>
+</body>
+</html>
