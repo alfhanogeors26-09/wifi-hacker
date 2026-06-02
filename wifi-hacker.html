@@ -631,14 +631,14 @@
         <div class="main-content">
             <!-- Panel 1 - Terminal & Scanner -->
             <div class="panel">
-                <div class="panel-title"><span class="status-indicator"></span>Terminal Output</div>
+                <div class="panel-title"><span class="status-indicator"></span>Output Terminal</div>
                 <div class="terminal" id="terminal">
                     <div class="log-line info">> Sistem terinisialisasi...</div>
                     <div class="log-line info">> Siap untuk operasi<span class="cursor"></span></div>
                 </div>
                 <div class="button-group">
                     <button id="scanBtn">🔍 Pindai Jaringan</button>
-                    <button id="clearTerminal">Hapus</button>
+                    <button id="clearTerminal">🗑️ Hapus</button>
                 </div>
 
                 <div class="panel-title" style="margin-top: 10px;">📡 Jaringan Tersedia</div>
@@ -740,7 +740,7 @@
                             </div>
                         </div>
                     </div>
-                    <button id="refreshSuggestions">🔄 Refresh Saran</button>
+                    <button id="refreshSuggestions">🔄 Perbarui Saran</button>
                 </div>
 
                 <!-- Tab Tips -->
@@ -776,7 +776,7 @@
     </div>
 
     <script>
-        // State management
+        // Manajemen status
         let state = {
             networks: [],
             currentPassword: '',
@@ -826,7 +826,7 @@
             }
         };
 
-        // DOM Elements
+        // Elemen DOM
         const terminal = document.getElementById('terminal');
         const networkList = document.getElementById('networkList');
         const passwordOutput = document.getElementById('passwordOutput');
@@ -840,7 +840,7 @@
         const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
 
-        // Tab switching
+        // Pergantian tab
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabName = btn.getAttribute('data-tab');
@@ -851,7 +851,7 @@
             });
         });
 
-        // Logger function with terminal animation
+        // Fungsi pencatat dengan animasi terminal
         function log(message, type = 'info') {
             const logLine = document.createElement('div');
             logLine.className = `log-line ${type}`;
@@ -863,7 +863,7 @@
             terminal.scrollTop = terminal.scrollHeight;
         }
 
-        // Generate realistic WiFi network names (expanded and realistic)
+        // Hasilkan nama jaringan WiFi realistis
         function generateNetworkNames() {
             const names = [
                 'RouterGX-2.4GHz', 'HomeWiFi5G', 'NETGEAR_MESH', 'TP-Link_Guest', 
@@ -879,7 +879,7 @@
             return names;
         }
 
-        // Generate random signal strength with more variety
+        // Hasilkan kekuatan sinyal acak dengan lebih banyak variasi
         function getRandomSignalStrength() {
             const random = Math.random();
             if (random < 0.1) return 1;
@@ -889,7 +889,7 @@
             return 5;
         }
 
-        // Create signal bar visualization
+        // Buat visualisasi batang sinyal
         function createSignalBars(strength) {
             let html = '<div class="signal-bars">';
             for (let i = 1; i <= 5; i++) {
@@ -899,7 +899,7 @@
             return html;
         }
 
-        // Scan for networks with terminal animation
+        // Pindai jaringan dengan animasi terminal
         async function scanNetworks() {
             if (state.isScanning) return;
             
@@ -923,7 +923,7 @@
             const names = generateNetworkNames();
             const selectedNames = [];
             
-            const networkCount = Math.floor(Math.random() * 8) + 7; // 7-14 networks
+            const networkCount = Math.floor(Math.random() * 8) + 7;
             for (let i = 0; i < networkCount; i++) {
                 const randomName = names[Math.floor(Math.random() * names.length)];
                 if (!selectedNames.includes(randomName)) {
@@ -934,7 +934,7 @@
             log(`[PINDAI] Menemukan ${selectedNames.length} jaringan`, 'success');
             await delay(600);
 
-            // Add networks with animation
+            // Tambahkan jaringan dengan animasi
             for (const name of selectedNames) {
                 const strength = getRandomSignalStrength();
                 const securityOptions = ['WPA3', 'WPA2', 'WEP'];
@@ -965,7 +965,7 @@
             networkCountDisplay.textContent = state.networks.length;
         }
 
-        // Add network to UI with styling
+        // Tambahkan jaringan ke UI dengan gaya
         function addNetworkToUI(network) {
             const networkItem = document.createElement('div');
             networkItem.className = 'network-item';
@@ -990,7 +990,7 @@
             networkList.appendChild(networkItem);
         }
 
-        // Perform security analysis
+        // Lakukan analisis keamanan
         function performSecurityAnalysis() {
             const analysisDiv = document.getElementById('securityAnalysis');
             let html = '';
@@ -1037,7 +1037,7 @@
             analysisDiv.innerHTML = html;
         }
 
-        // Generate secure password
+        // Hasilkan kata sandi aman
         function generatePassword() {
             const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             const lowercase = 'abcdefghijklmnopqrstuvwxyz';
@@ -1080,7 +1080,7 @@
             return password;
         }
 
-        // Calculate password entropy
+        // Hitung entropy kata sandi
         function calculateEntropy(password) {
             let charsetSize = 0;
             if (/[a-z]/.test(password)) charsetSize += 26;
@@ -1092,7 +1092,7 @@
             return entropy.toFixed(1);
         }
 
-        // Calculate password strength
+        // Hitung kekuatan kata sandi
         function getPasswordStrength(password) {
             let strength = 0;
             if (password.length >= 8) strength += 1;
@@ -1107,7 +1107,7 @@
             return 'strong';
         }
 
-        // Update password display
+        // Perbarui tampilan kata sandi
         function updatePasswordDisplay(password) {
             state.currentPassword = password;
             passwordOutput.textContent = password;
@@ -1135,7 +1135,7 @@
             updateSuggestions();
         }
 
-        // Update suggestions list
+        // Perbarui daftar saran
         function updateSuggestions() {
             const suggestionsList = document.getElementById('suggestionsList');
             let html = '';
@@ -1148,7 +1148,7 @@
             suggestionsList.innerHTML = html;
         }
 
-        // Handle password generation
+        // Tangani pembuatan kata sandi
         async function handleGeneratePassword() {
             generateBtn.disabled = true;
             log('[*] Menghasilkan kata sandi aman...', 'warning');
@@ -1170,7 +1170,7 @@
             generateBtn.disabled = false;
         }
 
-        // Copy to clipboard
+        // Salin ke papan klip
         function copyToClipboard() {
             if (!state.currentPassword) {
                 log('[!] Tidak ada kata sandi untuk disalin', 'error');
@@ -1189,25 +1189,25 @@
             });
         }
 
-        // Clear terminal
+        // Hapus terminal
         function clearTerminal() {
             terminal.innerHTML = '';
             log('[HAPUS] Terminal dihapus', 'info');
         }
 
-        // Utility delay function
+        // Fungsi penundaan utilitas
         function delay(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        // Event listeners
+        // Pendengar acara
         scanBtn.addEventListener('click', scanNetworks);
         generateBtn.addEventListener('click', handleGeneratePassword);
         copyBtn.addEventListener('click', copyToClipboard);
         clearTerminalBtn.addEventListener('click', clearTerminal);
         document.getElementById('refreshSuggestions').addEventListener('click', updateSuggestions);
 
-        // Generate initial password
+        // Hasilkan kata sandi awal
         handleGeneratePassword();
     </script>
 </body>
